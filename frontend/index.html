@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CheatShield AI 🎮</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#0a0a0f; color:#e0e0ff; font-family:'Segoe UI',sans-serif; min-height:100vh; }
+
+  header { background:linear-gradient(135deg,#1a0533,#0d1f4a); padding:20px 40px;
+    display:flex; align-items:center; gap:16px; border-bottom:1px solid #2a2a5a; }
+  header h1 { font-size:1.8rem; background:linear-gradient(90deg,#a855f7,#3b82f6); 
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  header span { font-size:0.85rem; color:#888; }
+
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; padding:24px; }
+  .card { background:#111122; border:1px solid #1e1e3a; border-radius:12px; padding:20px; }
+  .card h2 { font-size:1rem; color:#a855f7; margin-bottom:16px; text-transform:uppercase; letter-spacing:1px; }
+
+  .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; padding:0 24px; }
+  .stat { background:#111122; border:1px solid #1e1e3a; border-radius:10px; padding:16px; text-align:center; }
+  .stat .val { font-size:2rem; font-weight:700; color:#a855f7; }
+  .stat .lbl { font-size:0.75rem; color:#888; margin-top:4px; }
+
+  label { display:block; font-size:0.78rem; color:#888; margin-bottom:4px; margin-top:10px; }
+  input[type=range] { width:100%; accent-color:#a855f7; }
+  .val-display { font-size:0.9rem; color:#c084fc; font-weight:600; }
+
+  .sliders { display:grid; grid-template-columns:1fr 1fr; gap:0 20px; }
+
+  button#predictBtn {
+    width:100%; margin-top:20px; padding:14px;
+    background:linear-gradient(135deg,#7c3aed,#2563eb);
+    border:none; border-radius:8px; color:#fff;
+    font-size:1.1rem; font-weight:700; cursor:pointer; transition:opacity .2s;
+  }
+  button#predictBtn:hover { opacity:0.85; }
+
+  .result-box { margin-top:16px; padding:16px; border-radius:10px; text-align:center;
+    font-size:1.3rem; font-weight:700; display:none; }
+  .result-box.cheat  { background:#2d0a0a; border:2px solid #ef4444; color:#f87171; }
+  .result-box.legit  { background:#0a2d0a; border:2px solid #22c55e; color:#4ade80; }
+  .result-meta { font-size:0.85rem; font-weight:400; margin-top:6px; color:#aaa; }
+
+  table { width:100%; border-collapse:collapse; font-size:0.8rem; }
+  th { color:#666; text-align:left; padding:6px 8px; border-bottom:1px solid #1e1e3a; }
+  td { padding:6px 8px; border-bottom:1px solid #111; }
+  .badge { padding:2px 8px; border-radius:20px; font-size:0.75rem; font-weight:700; }
+  .badge.c { background:#2d0a0a; color:#f87171; }
+  .badge.l { background:#0a2d0a; color:#4ade80; }
+
+  canvas { max-height:220px; }
+  .full { grid-column:1/-1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🛡️ CheatShield AI</h1>
+    <span>Real-time Game Behavior Analysis · ML Ensemble · 5 Models</span>
+  </div>
+</header>
+
+<!-- Stats -->
+<div class="stats-row" style="margin-top:20px;" id="statsRow">
+  <div class="stat"><div class="val" id="s-total">—</div><div class="lbl">Total Scanned</div></div>
+  <div class="stat"><div class="val" id="s-cheaters" style="color:#f87171">—</div><div class="lbl">Cheaters Found</div></div>
+  <div class="stat"><div class="val" id="s-legit" style="color:#4ade80">—</div><div class="lbl">Legit Players</div></div>
+  <div class="stat"><div class="val" id="s-rate">—</div><div class="lbl">Cheat Rate %</div></div>
+</div>
+
+<div class="grid">
+
+  <!-- Input Panel -->
+  <div class="card">
+    <h2>🎮 Player Session Input</h2>
+    <div class="sliders" id="sliders"></div>
+    <button id="predictBtn" onclick="predict()">⚡ Analyze Player</button>
+    <div class="result-box" id="resultBox"></div>
+  </div>
+
+  <!-- Scatter PCA -->
+  <div class="card">
+    <h2>🔵 PCA Player Space</h2>
+    <canvas id="pcaChart"></canvas>
+  </div>
+
+  <!-- Confidence Bar -->
+  <div class="card">
+    <h2>📊 Detection Confidence History</h2>
+    <canvas id="confChart"></canvas>
+  </div>
+
+  <!-- History Table -->
+  <div class="card">
+    <h2>📋 Recent Sessions</h2>
+    <table>
+      <thead><tr><th>Time</th><th>Result</th><th>Confidence</th><th>Archetype</th></tr></thead>
+      <tbody id="histBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+const FEATURES = {
+  avg_reaction_ms:  { label:"Avg Reaction (ms)",    min:30,  max:500, step:1,    def:220 },
+  reaction_std:     { label:"Reaction StdDev",       min:1,   max:100, step:1,    def:45  },
+  click_accuracy:   { label:"Click Accuracy",        min:0,   max:1,   step:0.01, def:0.72},
+  actions_per_min:  { label:"Actions/Min",           min:50,  max:700, step:1,    def:180 },
+  mouse_speed_avg:  { label:"Mouse Speed (px/s)",    min:100, max:2000,step:10,   def:500 },
+  mouse_speed_std:  { label:"Mouse Speed StdDev",    min:5,   max:400, step:1,    def:200 },
+  snap_events:      { label:"Snap Events",           min:0,   max:80,  step:1,    def:2   },
+  win_rate:         { label:"Win Rate",              min:0,   max:1,   step:0.01, def:0.45},
+  kill_death_ratio: { label:"K/D Ratio",             min:0.1, max:15,  step:0.1,  def:1.1 },
+  headshot_ratio:   { label:"Headshot Ratio",        min:0,   max:1,   step:0.01, def:0.35},
+  session_hours:    { label:"Session Hours",         min:0.5, max:12,  step:0.5,  def:2.5 },
+  movement_entropy: { label:"Movement Entropy",      min:0,   max:1,   step:0.01, def:0.78},
+};
+
+// Build sliders
+const sliderDiv = document.getElementById("sliders");
+for (const [key, cfg] of Object.entries(FEATURES)) {
+  sliderDiv.innerHTML += `
+    <div>
+      <label>${cfg.label} <span class="val-display" id="v_${key}">${cfg.def}</span></label>
+      <input type="range" id="${key}" min="${cfg.min}" max="${cfg.max}" step="${cfg.step}" value="${cfg.def}"
+        oninput="document.getElementById('v_${key}').textContent=parseFloat(this.value).toFixed(this.step<1?2:0)"/>
+    </div>`;
+}
+
+// Charts
+const pcaCtx   = document.getElementById("pcaChart").getContext("2d");
+const confCtx  = document.getElementById("confChart").getContext("2d");
+
+const pcaChart = new Chart(pcaCtx, {
+  type:"scatter",
+  data:{ datasets:[
+    { label:"Legit",   data:[], backgroundColor:"rgba(74,222,128,0.6)", pointRadius:5 },
+    { label:"Cheater", data:[], backgroundColor:"rgba(248,113,113,0.6)", pointRadius:5 },
+    { label:"You",     data:[], backgroundColor:"#facc15", pointRadius:10, pointStyle:"star" }
+  ]},
+  options:{ plugins:{ legend:{ labels:{ color:"#aaa" }}},
+    scales:{ x:{ticks:{color:"#666"}, grid:{color:"#1a1a2e"}},
+             y:{ticks:{color:"#666"}, grid:{color:"#1a1a2e"}} }}
+});
+
+const confChart = new Chart(confCtx, {
+  type:"bar",
+  data:{ labels:[], datasets:[{ label:"Confidence %", data:[], backgroundColor:[] }]},
+  options:{ plugins:{ legend:{ labels:{ color:"#aaa" }}},
+    scales:{ x:{ticks:{color:"#666"}, grid:{color:"#1a1a2e"}},
+             y:{ticks:{color:"#666"}, grid:{color:"#1a1a2e"}, max:100 } }}
+});
+
+async function predict() {
+  const body = {};
+  for (const key of Object.keys(FEATURES))
+    body[key] = parseFloat(document.getElementById(key).value);
+
+  const res  = await fetch("http://localhost:5000/predict", {
+    method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)
+  });
+  const data = await res.json();
+
+  const box = document.getElementById("resultBox");
+  box.style.display = "block";
+  box.className = "result-box " + (data.label ? "cheat" : "legit");
+  box.innerHTML = `${data.prediction}<div class="result-meta">
+    Confidence: ${data.confidence}% · ${data.archetype}<br/>Risk Score: ${data.risk_score}/100
+  </div>`;
+
+  // Update PCA chart
+  const ds = data.label === 1 ? pcaChart.data.datasets[1] : pcaChart.data.datasets[0];
+  ds.data.push({ x: data.pca[0], y: data.pca[1] });
+  pcaChart.data.datasets[2].data = [{ x: data.pca[0], y: data.pca[1] }];
+  pcaChart.update();
+
+  // Update confidence chart
+  const label = new Date().toLocaleTimeString();
+  confChart.data.labels.push(label);
+  confChart.data.datasets[0].data.push(data.confidence);
+  confChart.data.datasets[0].backgroundColor.push(data.label ? "#f87171" : "#4ade80");
+  if (confChart.data.labels.length > 12) {
+    confChart.data.labels.shift();
+    confChart.data.datasets[0].data.shift();
+    confChart.data.datasets[0].backgroundColor.shift();
+  }
+  confChart.update();
+
+  loadHistory(); loadStats();
+}
+
+async function loadHistory() {
+  const data = await fetch("http://localhost:5000/history").then(r=>r.json());
+  const tbody = document.getElementById("histBody");
+  tbody.innerHTML = data.map(r => `<tr>
+    <td>${r.timestamp?.slice(11,19) || "—"}</td>
+    <td><span class="badge ${r.prediction ? 'c':'l'}">${r.prediction ? "CHEAT":"LEGIT"}</span></td>
+    <td>${r.confidence}%</td>
+    <td>${r.archetype}</td>
+  </tr>`).join("");
+}
+
+async function loadStats() {
+  const s = await fetch("http://localhost:5000/stats").then(r=>r.json());
+  document.getElementById("s-total").textContent    = s.total;
+  document.getElementById("s-cheaters").textContent = s.cheaters;
+  document.getElementById("s-legit").textContent    = s.legit;
+  document.getElementById("s-rate").textContent     = s.cheat_rate + "%";
+}
+
+loadStats(); loadHistory();
+setInterval(() => { loadStats(); loadHistory(); }, 5000);
+</script>
+</body>
+</html>
