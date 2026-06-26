@@ -803,6 +803,105 @@
     transition: transform 0.3s;
   }
 
+  /* ── Player Profile Card ─────────────────────────────────────────── */
+  .profile-card-wrapper {
+    perspective: 800px;
+    grid-column: 1 / -1;
+  }
+
+  .profile-card {
+    position: relative;
+    z-index: 5;
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 28px;
+    transition: transform 0.15s ease-out, box-shadow 0.3s ease;
+    transform-style: preserve-3d;
+    animation: cardSlideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 24px;
+    align-items: center;
+  }
+
+  @keyframes cardSlideUp {
+    from { opacity: 0; transform: translateY(30px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .profile-card:hover {
+    box-shadow: 0 12px 40px rgba(var(--accent-rgb), 0.12);
+  }
+
+  .profile-avatar {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.3), rgba(var(--accent-rgb), 0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    border: 2px solid var(--border-subtle);
+  }
+
+  .profile-info { display: flex; flex-direction: column; gap: 6px; }
+
+  .profile-gamertag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .profile-details {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .profile-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .profile-badge.cheat { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-border); }
+  .profile-badge.legit { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
+
+  .profile-radar-wrap {
+    width: 200px;
+    height: 200px;
+  }
+
+  .profile-radar-wrap canvas {
+    max-height: 200px !important;
+  }
+
+  /* FLAGGED stamp for cheaters */
+  .flagged-stamp {
+    position: absolute;
+    top: 20px; right: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: var(--danger);
+    opacity: 0.2;
+    transform: rotate(12deg);
+    text-transform: uppercase;
+    letter-spacing: 6px;
+    border: 4px solid var(--danger);
+    padding: 4px 16px;
+    border-radius: 8px;
+    pointer-events: none;
+  }
+
   /* ── Responsive ───────────────────────────────────────────────────── */
   @media (max-width: 900px) {
     .grid { grid-template-columns: 1fr; }
@@ -812,6 +911,9 @@
     .header-main { padding: 16px 20px; flex-wrap: wrap; gap: 12px; }
     .header-right { width: 100%; justify-content: flex-start; }
     .grid { padding: 16px; }
+    .profile-card { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+    .profile-details { justify-content: center; }
+    .profile-radar-wrap { width: 160px; height: 160px; }
   }
 </style>
 </head>
@@ -895,6 +997,9 @@
       <tbody id="histBody"></tbody>
     </table>
   </div>
+
+  <!-- Player Profile Card (rendered by JS) -->
+  <div id="profileCardSlot"></div>
 
 </div>
 
@@ -1058,6 +1163,9 @@ async function predict() {
 
   // Update HUD last scan time
   document.getElementById('lastScanTime').textContent = new Date().toLocaleTimeString();
+
+  // Render player profile card
+  renderProfileCard(body, data);
 }
 
 async function loadHistory() {
@@ -1121,6 +1229,101 @@ function updateThreatGauge(rate) {
   gauge.style.stroke = color;
   levelEl.textContent = level;
   levelEl.className = 'threat-level-text ' + levelClass;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// PLAYER PROFILE CARD — Radar chart + 3D tilt + gamer tag
+// ═══════════════════════════════════════════════════════════════════════
+const GAMER_PREFIXES = ['Shadow','Phantom','Neon','Cyber','Blaze','Storm','Viper','Ghost','Frost','Nova','Rogue','Apex'];
+const GAMER_SUFFIXES = ['Hawk','Wolf','Strike','Fury','Core','Byte','Zero','Edge','X','Flux','Blade','Wraith'];
+const AVATARS = ['🎮','🕹️','👾','🤖','💀','🐺','🦅','⚡','🔥','❄️','🌀','🎯'];
+let profileRadarChart = null;
+
+function randomGamerTag() {
+  const prefix = GAMER_PREFIXES[Math.floor(Math.random() * GAMER_PREFIXES.length)];
+  const suffix = GAMER_SUFFIXES[Math.floor(Math.random() * GAMER_SUFFIXES.length)];
+  const num = Math.floor(Math.random() * 999);
+  return `${prefix}${suffix}${num}`;
+}
+
+function renderProfileCard(inputData, result) {
+  const slot = document.getElementById('profileCardSlot');
+  const isCheat = result.label === 1;
+  const tag = randomGamerTag();
+  const avatar = AVATARS[Math.floor(Math.random() * AVATARS.length)];
+
+  slot.innerHTML = `
+    <div class="profile-card-wrapper">
+      <div class="profile-card" id="profileCard">
+        ${isCheat ? '<div class="flagged-stamp">FLAGGED</div>' : ''}
+        <div class="profile-avatar">${avatar}</div>
+        <div class="profile-info">
+          <div class="profile-gamertag">${tag}</div>
+          <div class="profile-details">
+            <span class="profile-badge ${isCheat ? 'cheat' : 'legit'}">${isCheat ? '🚨 Cheater' : '✅ Legit'}</span>
+            <span class="profile-badge" style="background:rgba(var(--accent-rgb),0.1); color:var(--accent); border:1px solid var(--border-subtle);">${result.archetype}</span>
+            <span class="profile-badge" style="background:rgba(var(--accent-rgb),0.1); color:var(--accent); border:1px solid var(--border-subtle);">🎯 ${result.confidence}%</span>
+          </div>
+        </div>
+        <div class="profile-radar-wrap"><canvas id="profileRadar"></canvas></div>
+      </div>
+    </div>`;
+
+  // Build radar chart
+  const radarLabels = Object.keys(FEATURES).map(k => FEATURES[k].label.split(' ')[0]);
+  const normalizedValues = Object.keys(FEATURES).map(k => {
+    const cfg = FEATURES[k];
+    return ((inputData[k] - cfg.min) / (cfg.max - cfg.min)) * 100;
+  });
+
+  if (profileRadarChart) profileRadarChart.destroy();
+  const radarCtx = document.getElementById('profileRadar').getContext('2d');
+  profileRadarChart = new Chart(radarCtx, {
+    type: 'radar',
+    data: {
+      labels: radarLabels,
+      datasets: [{
+        label: tag,
+        data: normalizedValues,
+        backgroundColor: isCheat ? 'rgba(248,113,113,0.15)' : 'rgba(74,222,128,0.15)',
+        borderColor: isCheat ? '#f87171' : '#4ade80',
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: isCheat ? '#f87171' : '#4ade80'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        r: {
+          beginAtZero: true,
+          max: 100,
+          ticks: { display: false },
+          grid: { color: 'rgba(var(--accent-rgb), 0.08)' },
+          angleLines: { color: 'rgba(var(--accent-rgb), 0.08)' },
+          pointLabels: { color: '#888', font: { size: 8, family: "'Inter'" } }
+        }
+      }
+    }
+  });
+
+  // 3D tilt effect
+  const card = document.getElementById('profileCard');
+  card.addEventListener('mousemove', (e) => {
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -8;
+    const rotateY = ((x - centerX) / centerX) * 8;
+    card.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+  });
+  card.addEventListener('mouseleave', () => {
+    card.style.transform = 'rotateX(0) rotateY(0)';
+  });
 }
 
 loadStats(); loadHistory();
