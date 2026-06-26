@@ -417,15 +417,165 @@
   }
 
   /* ── Charts & Layout Utilities ────────────────────────────────────── */
-  canvas { max-height: 220px; }
+  canvas:not(#particleCanvas) { max-height: 220px; }
   .full { grid-column: 1 / -1; }
+
+  /* ── Particle Canvas ──────────────────────────────────────────────── */
+  #particleCanvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Header HUD ───────────────────────────────────────────────────── */
+  header {
+    position: relative;
+    z-index: 10;
+    background: linear-gradient(135deg, rgba(26, 5, 51, 0.92), rgba(13, 31, 74, 0.92));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid rgba(168, 85, 247, 0.2);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(168, 85, 247, 0.15);
+    overflow: hidden;
+  }
+
+  .header-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 40px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .shield-icon {
+    font-size: 2rem;
+    animation: shieldPulse 2s ease-in-out infinite;
+    filter: drop-shadow(0 0 12px rgba(168, 85, 247, 0.5));
+  }
+
+  @keyframes shieldPulse {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.3)); }
+    50% { transform: scale(1.08); filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.7)); }
+  }
+
+  .header-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.9rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #a855f7, #6366f1, #3b82f6, #a855f7);
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.5px;
+    animation: shimmerText 4s linear infinite;
+  }
+
+  @keyframes shimmerText {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 300% 50%; }
+  }
+
+  .header-subtitle {
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.35);
+    font-weight: 400;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .hud-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #4ade80;
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #4ade80;
+    animation: breathe 2s ease-in-out infinite;
+    box-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
+  }
+
+  @keyframes breathe {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .hud-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+  }
+
+  .hud-time .time-label {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.2);
+  }
+
+  .hud-time .time-value {
+    color: #c084fc;
+  }
+
+  /* ── Scanning Progress Bar in Header ──────────────────────────────── */
+  .scan-bar {
+    height: 2px;
+    background: rgba(255, 255, 255, 0.03);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scan-bar::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -40%;
+    width: 40%; height: 100%;
+    background: linear-gradient(90deg, transparent, #a855f7, #3b82f6, transparent);
+    animation: scanSweep 2.5s ease-in-out infinite;
+  }
+
+  @keyframes scanSweep {
+    0% { left: -40%; }
+    100% { left: 100%; }
+  }
 
   /* ── Responsive ───────────────────────────────────────────────────── */
   @media (max-width: 900px) {
     .grid { grid-template-columns: 1fr; }
     .stats-row { grid-template-columns: repeat(2, 1fr); }
     .sliders { grid-template-columns: 1fr; }
-    header { padding: 16px 20px; }
+    .header-main { padding: 16px 20px; flex-wrap: wrap; gap: 12px; }
+    .header-right { width: 100%; justify-content: flex-start; }
     .grid { padding: 16px; }
     .stats-row { padding: 0 16px; }
   }
@@ -434,10 +584,27 @@
 <body>
 
 <header>
-  <div>
-    <h1>🛡️ CheatShield AI</h1>
-    <span>Real-time Game Behavior Analysis · ML Ensemble · 5 Models</span>
+  <canvas id="particleCanvas"></canvas>
+  <div class="header-main">
+    <div class="header-left">
+      <div class="shield-icon">🛡️</div>
+      <div>
+        <div class="header-title">CheatShield AI</div>
+        <div class="header-subtitle">Real-time Game Behavior Analysis · ML Ensemble · 5 Models</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="hud-status">
+        <div class="status-dot"></div>
+        SYSTEM ONLINE
+      </div>
+      <div class="hud-time">
+        <span class="time-label">Last Scan</span>
+        <span class="time-value" id="lastScanTime">—</span>
+      </div>
+    </div>
   </div>
+  <div class="scan-bar"></div>
 </header>
 
 <!-- Stats -->
@@ -482,6 +649,74 @@
 </div>
 
 <script>
+// ═══════════════════════════════════════════════════════════════════════
+// PARTICLE SYSTEM — Floating dots with connections behind header
+// ═══════════════════════════════════════════════════════════════════════
+(function initParticles() {
+  const canvas = document.getElementById('particleCanvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  const PARTICLE_COUNT = 50;
+  const CONNECTION_DIST = 120;
+
+  function resize() {
+    const header = canvas.parentElement;
+    canvas.width = header.offsetWidth;
+    canvas.height = header.offsetHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: (Math.random() - 0.5) * 0.5,
+      radius: Math.random() * 2 + 0.5,
+      alpha: Math.random() * 0.5 + 0.2
+    });
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    particles.forEach((p, i) => {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+      if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+      // Draw connections
+      for (let j = i + 1; j < particles.length; j++) {
+        const q = particles[j];
+        const dx = p.x - q.x, dy = p.y - q.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < CONNECTION_DIST) {
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(q.x, q.y);
+          ctx.strokeStyle = `rgba(168, 85, 247, ${0.15 * (1 - dist / CONNECTION_DIST)})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+
+      // Draw particle
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(168, 85, 247, ${p.alpha})`;
+      ctx.fill();
+    });
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+})();
+
+// ═══════════════════════════════════════════════════════════════════════
+// FEATURE CONFIGURATION
+// ═══════════════════════════════════════════════════════════════════════
 const FEATURES = {
   avg_reaction_ms:  { label:"Avg Reaction (ms)",    min:30,  max:500, step:1,    def:220 },
   reaction_std:     { label:"Reaction StdDev",       min:1,   max:100, step:1,    def:45  },
@@ -570,6 +805,9 @@ async function predict() {
   confChart.update();
 
   loadHistory(); loadStats();
+
+  // Update HUD last scan time
+  document.getElementById('lastScanTime').textContent = new Date().toLocaleTimeString();
 }
 
 async function loadHistory() {
