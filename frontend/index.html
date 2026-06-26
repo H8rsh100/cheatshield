@@ -306,16 +306,6 @@
   }
 
   /* ── Stat Cards ───────────────────────────────────────────────────── */
-  .stats-row {
-    position: relative;
-    z-index: 5;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    padding: 0 24px;
-    max-width: 1440px;
-    margin: 24px auto 0;
-  }
 
   .stat {
     position: relative;
@@ -708,15 +698,120 @@
     100% { left: 100%; }
   }
 
+  /* ── Threat Gauge ──────────────────────────────────────────────────── */
+  .threat-dashboard {
+    position: relative;
+    z-index: 5;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 24px;
+    padding: 24px;
+    max-width: 1440px;
+    margin: 24px auto 0;
+    align-items: center;
+  }
+
+  .threat-gauge-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .threat-gauge {
+    position: relative;
+    width: 160px;
+    height: 160px;
+  }
+
+  .threat-gauge svg {
+    transform: rotate(-90deg);
+    width: 100%; height: 100%;
+  }
+
+  .threat-gauge .gauge-bg {
+    fill: none;
+    stroke: rgba(var(--accent-rgb), 0.08);
+    stroke-width: 10;
+  }
+
+  .threat-gauge .gauge-fill {
+    fill: none;
+    stroke: var(--success);
+    stroke-width: 10;
+    stroke-linecap: round;
+    stroke-dasharray: 377;
+    stroke-dashoffset: 377;
+    transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.6s ease;
+  }
+
+  .threat-gauge .gauge-center {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+
+  .threat-gauge .gauge-percent {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+
+  .threat-gauge .gauge-label {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .threat-level-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    text-align: center;
+  }
+
+  .threat-level-text.low { color: var(--success); background: var(--success-bg); }
+  .threat-level-text.moderate { color: #facc15; background: rgba(250, 204, 21, 0.1); }
+  .threat-level-text.high { color: #f97316; background: rgba(249, 115, 22, 0.1); }
+  .threat-level-text.critical { color: var(--danger); background: var(--danger-bg); animation: criticalPulse 1s ease-in-out infinite; }
+
+  @keyframes criticalPulse {
+    0%, 100% { box-shadow: 0 0 0 0 transparent; }
+    50% { box-shadow: 0 0 12px var(--danger-bg); }
+  }
+
+  .stats-row {
+    position: relative;
+    z-index: 5;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+
+  /* ── Animated Counter ─────────────────────────────────────────────── */
+  .counter-animate {
+    display: inline-block;
+    transition: transform 0.3s;
+  }
+
   /* ── Responsive ───────────────────────────────────────────────────── */
   @media (max-width: 900px) {
     .grid { grid-template-columns: 1fr; }
+    .threat-dashboard { grid-template-columns: 1fr; justify-items: center; padding: 16px; }
     .stats-row { grid-template-columns: repeat(2, 1fr); }
     .sliders { grid-template-columns: 1fr; }
     .header-main { padding: 16px 20px; flex-wrap: wrap; gap: 12px; }
     .header-right { width: 100%; justify-content: flex-start; }
     .grid { padding: 16px; }
-    .stats-row { padding: 0 16px; }
   }
 </style>
 </head>
@@ -746,12 +841,28 @@
   <div class="scan-bar"></div>
 </header>
 
-<!-- Stats -->
-<div class="stats-row" id="statsRow">
-  <div class="stat"><div class="val" id="s-total">—</div><div class="lbl">Total Scanned</div></div>
-  <div class="stat"><div class="val" id="s-cheaters" style="color:var(--danger)">—</div><div class="lbl">Cheaters Found</div></div>
-  <div class="stat"><div class="val" id="s-legit" style="color:var(--success)">—</div><div class="lbl">Legit Players</div></div>
-  <div class="stat"><div class="val" id="s-rate">—</div><div class="lbl">Cheat Rate %</div></div>
+<!-- Threat Dashboard -->
+<div class="threat-dashboard">
+  <div class="threat-gauge-container">
+    <div class="threat-gauge">
+      <svg viewBox="0 0 130 130">
+        <circle class="gauge-bg" cx="65" cy="65" r="60"/>
+        <circle class="gauge-fill" id="gaugeFill" cx="65" cy="65" r="60"/>
+      </svg>
+      <div class="gauge-center">
+        <div class="gauge-percent" id="gaugePercent">0%</div>
+        <div class="gauge-label">Threat</div>
+      </div>
+    </div>
+    <div class="threat-level-text low" id="threatLevel">LOW</div>
+  </div>
+
+  <div class="stats-row" id="statsRow">
+    <div class="stat"><div class="val" id="s-total">—</div><div class="lbl">Total Scanned</div></div>
+    <div class="stat"><div class="val" id="s-cheaters" style="color:var(--danger)">—</div><div class="lbl">Cheaters Found</div></div>
+    <div class="stat"><div class="val" id="s-legit" style="color:var(--success)">—</div><div class="lbl">Legit Players</div></div>
+    <div class="stat"><div class="val" id="s-rate">—</div><div class="lbl">Cheat Rate %</div></div>
+  </div>
 </div>
 
 <div class="grid">
@@ -962,10 +1073,54 @@ async function loadHistory() {
 
 async function loadStats() {
   const s = await fetch("http://localhost:5000/stats").then(r=>r.json());
-  document.getElementById("s-total").textContent    = s.total;
-  document.getElementById("s-cheaters").textContent = s.cheaters;
-  document.getElementById("s-legit").textContent    = s.legit;
-  document.getElementById("s-rate").textContent     = s.cheat_rate + "%";
+
+  // Animate counters
+  animateCounter('s-total', s.total);
+  animateCounter('s-cheaters', s.cheaters);
+  animateCounter('s-legit', s.legit);
+  document.getElementById("s-rate").textContent = s.cheat_rate + "%";
+
+  // Update threat gauge
+  updateThreatGauge(s.cheat_rate);
+}
+
+function animateCounter(id, target) {
+  const el = document.getElementById(id);
+  const current = parseInt(el.textContent) || 0;
+  if (current === target) return;
+  const duration = 600;
+  const start = performance.now();
+  function step(now) {
+    const progress = Math.min((now - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+    el.textContent = Math.round(current + (target - current) * eased);
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function updateThreatGauge(rate) {
+  const gauge = document.getElementById('gaugeFill');
+  const percentEl = document.getElementById('gaugePercent');
+  const levelEl = document.getElementById('threatLevel');
+  const circumference = 2 * Math.PI * 60; // r=60
+  const offset = circumference - (rate / 100) * circumference;
+
+  gauge.style.strokeDasharray = circumference;
+  gauge.style.strokeDashoffset = offset;
+
+  percentEl.textContent = rate + '%';
+
+  // Color coding
+  let color, level, levelClass;
+  if (rate < 15) { color = 'var(--success)'; level = 'LOW'; levelClass = 'low'; }
+  else if (rate < 35) { color = '#facc15'; level = 'MODERATE'; levelClass = 'moderate'; }
+  else if (rate < 55) { color = '#f97316'; level = 'HIGH'; levelClass = 'high'; }
+  else { color = 'var(--danger)'; level = 'CRITICAL'; levelClass = 'critical'; }
+
+  gauge.style.stroke = color;
+  levelEl.textContent = level;
+  levelEl.className = 'threat-level-text ' + levelClass;
 }
 
 loadStats(); loadHistory();
