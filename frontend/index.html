@@ -902,6 +902,132 @@
     pointer-events: none;
   }
 
+  /* ── Toast Notifications ────────────────────────────────────────── */
+  .toast-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+  }
+
+  .toast {
+    pointer-events: auto;
+    min-width: 300px;
+    max-width: 420px;
+    padding: 14px 20px;
+    border-radius: 12px;
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    animation: toastSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  }
+
+  .toast.removing {
+    animation: toastSlideOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  @keyframes toastSlideIn {
+    from { opacity: 0; transform: translateX(100%); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes toastSlideOut {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(100%); }
+  }
+
+  .toast-progress {
+    position: absolute;
+    bottom: 0; left: 0;
+    height: 3px;
+    border-radius: 0 0 12px 12px;
+    animation: toastCountdown 4s linear forwards;
+  }
+
+  .toast-progress.cheat { background: var(--danger); }
+  .toast-progress.legit { background: var(--success); }
+
+  @keyframes toastCountdown {
+    from { width: 100%; }
+    to { width: 0%; }
+  }
+
+  .toast-icon { margin-right: 8px; }
+
+  /* ── Button Ripple ───────────────────────────────────────────────── */
+  .btn-ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(0);
+    animation: btnRippleAnim 0.6s ease-out;
+    pointer-events: none;
+  }
+
+  @keyframes btnRippleAnim {
+    to { transform: scale(4); opacity: 0; }
+  }
+
+  /* ── Staggered Card Entrance ────────────────────────────────────── */
+  .card, .stat {
+    opacity: 0;
+    animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .grid .card:nth-child(1) { animation-delay: 0.1s; }
+  .grid .card:nth-child(2) { animation-delay: 0.2s; }
+  .grid .card:nth-child(3) { animation-delay: 0.3s; }
+  .grid .card:nth-child(4) { animation-delay: 0.4s; }
+
+  .stats-row .stat:nth-child(1) { animation-delay: 0.05s; }
+  .stats-row .stat:nth-child(2) { animation-delay: 0.1s; }
+  .stats-row .stat:nth-child(3) { animation-delay: 0.15s; }
+  .stats-row .stat:nth-child(4) { animation-delay: 0.2s; }
+
+  /* ── Keyboard Shortcuts Indicator ───────────────────────────────── */
+  .kbd {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    background: rgba(var(--accent-rgb), 0.1);
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    padding: 1px 6px;
+    color: var(--accent);
+    margin: 0 2px;
+  }
+
+  .shortcuts-hint {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  /* ── Slider Thumb Pulse ─────────────────────────────────────────── */
+  input[type=range]:focus::-webkit-slider-thumb {
+    box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.2), 0 0 10px var(--glow-color);
+  }
+
   /* ── Responsive ───────────────────────────────────────────────────── */
   @media (max-width: 900px) {
     .grid { grid-template-columns: 1fr; }
@@ -914,6 +1040,7 @@
     .profile-card { grid-template-columns: 1fr; justify-items: center; text-align: center; }
     .profile-details { justify-content: center; }
     .profile-radar-wrap { width: 160px; height: 160px; }
+    .shortcuts-hint { display: none; }
   }
 </style>
 </head>
@@ -937,6 +1064,11 @@
       <div class="hud-time">
         <span class="time-label">Last Scan</span>
         <span class="time-value" id="lastScanTime">—</span>
+      </div>
+      <div class="shortcuts-hint">
+        <kbd class="kbd">Space</kbd> Scan
+        <kbd class="kbd">R</kbd> Random
+        <kbd class="kbd">T</kbd> Theme
       </div>
     </div>
   </div>
@@ -1002,6 +1134,9 @@
   <div id="profileCardSlot"></div>
 
 </div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
 
 <script>
 // ═══════════════════════════════════════════════════════════════════════
@@ -1166,6 +1301,13 @@ async function predict() {
 
   // Render player profile card
   renderProfileCard(body, data);
+
+  // Show toast notification
+  showToast(
+    data.label ? '⚠️ Cheater detected!' : '✅ Player cleared',
+    `${data.confidence}% confidence · ${data.archetype}`,
+    data.label ? 'cheat' : 'legit'
+  );
 }
 
 async function loadHistory() {
@@ -1363,6 +1505,84 @@ function cycleTheme() {
 
 // Apply saved theme on load
 applyTheme(currentThemeIdx);
+
+// ═══════════════════════════════════════════════════════════════════════
+// TOAST NOTIFICATION SYSTEM
+// ═══════════════════════════════════════════════════════════════════════
+function showToast(title, subtitle, type = 'legit') {
+  const container = document.getElementById('toastContainer');
+  // Max 3 toasts
+  while (container.children.length >= 3) {
+    container.removeChild(container.firstChild);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = `
+    <span class="toast-icon">${type === 'cheat' ? '🚨' : '✅'}</span>
+    <strong>${title}</strong><br/>
+    <span style="font-size:0.75rem;color:var(--text-muted)">${subtitle}</span>
+    <div class="toast-progress ${type}"></div>
+  `;
+  container.appendChild(toast);
+
+  // Auto-dismiss after 4s
+  setTimeout(() => {
+    toast.classList.add('removing');
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// KEYBOARD SHORTCUTS — Space: Scan, R: Random, T: Theme
+// ═══════════════════════════════════════════════════════════════════════
+function randomizeSliders() {
+  for (const [key, cfg] of Object.entries(FEATURES)) {
+    const slider = document.getElementById(key);
+    const range = cfg.max - cfg.min;
+    const randomVal = cfg.min + Math.random() * range;
+    const snapped = Math.round(randomVal / cfg.step) * cfg.step;
+    const clamped = Math.max(cfg.min, Math.min(cfg.max, snapped));
+    slider.value = clamped;
+    document.getElementById('v_' + key).textContent = clamped.toFixed(cfg.step < 1 ? 2 : 0);
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  // Don't trigger if typing in an input
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+  switch(e.code) {
+    case 'Space':
+      e.preventDefault();
+      predict();
+      break;
+    case 'KeyR':
+      e.preventDefault();
+      randomizeSliders();
+      break;
+    case 'KeyT':
+      e.preventDefault();
+      cycleTheme();
+      break;
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// BUTTON RIPPLE EFFECT
+// ═══════════════════════════════════════════════════════════════════════
+document.getElementById('predictBtn').addEventListener('click', function(e) {
+  const btn = this;
+  const rect = btn.getBoundingClientRect();
+  const ripple = document.createElement('span');
+  ripple.className = 'btn-ripple';
+  const size = Math.max(rect.width, rect.height);
+  ripple.style.width = ripple.style.height = size + 'px';
+  ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+  ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+  btn.appendChild(ripple);
+  setTimeout(() => ripple.remove(), 600);
+});
 </script>
 
 <!-- Theme Switcher FAB -->
