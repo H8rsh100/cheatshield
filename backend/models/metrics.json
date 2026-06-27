@@ -1,0 +1,57 @@
+{
+  "timestamp": "2026-06-27T13:26:42.613654Z",
+  "dataset_hash": "11e198d9de94",
+  "dataset_rows": 4387,
+  "dataset_cheaters": 387,
+  "train_size": 3509,
+  "test_size": 878,
+  "features": [
+    "avg_reaction_ms",
+    "reaction_std",
+    "click_accuracy",
+    "actions_per_min",
+    "mouse_speed_avg",
+    "mouse_speed_std",
+    "snap_events",
+    "win_rate",
+    "kill_death_ratio",
+    "headshot_ratio",
+    "session_hours",
+    "movement_entropy"
+  ],
+  "cv_accuracy": 0.9886003308257232,
+  "cv_precision": 0.9021836351581989,
+  "cv_recall": 0.9774193548387096,
+  "cv_f1": 0.9380875107104879,
+  "test_accuracy": 0.9863325740318907,
+  "test_precision": 0.891566265060241,
+  "test_recall": 0.961038961038961,
+  "test_f1": 0.925,
+  "confusion_matrix": [
+    [
+      792,
+      9
+    ],
+    [
+      3,
+      74
+    ]
+  ],
+  "feature_importance": {
+    "snap_events": 0.3880116671231214,
+    "avg_reaction_ms": 0.1729525793376321,
+    "actions_per_min": 0.08954060693111622,
+    "mouse_speed_avg": 0.07136179280009397,
+    "session_hours": 0.06106708914378214,
+    "mouse_speed_std": 0.04981244718650626,
+    "reaction_std": 0.04809381273624733,
+    "kill_death_ratio": 0.03771425848017112,
+    "headshot_ratio": 0.03238857126802547,
+    "win_rate": 0.020950787291634056,
+    "movement_entropy": 0.01576163107356828,
+    "click_accuracy": 0.0123447566281018
+  },
+  "dbscan_anomalies": 371,
+  "dbscan_clusters": 19,
+  "pca_variance_explained": 0.6056730873726013
+}
