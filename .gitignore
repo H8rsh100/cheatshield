@@ -1,0 +1,30 @@
+# Raw Kaggle datasets (too large for git)
+backend/raw_data/
+train_V2.csv.zip
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment
+venv/
+.env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Model artifacts (can be regenerated via train.py)
+# backend/models/*.pkl
+
+# Database (regenerated at runtime)
+# backend/sessions.db
